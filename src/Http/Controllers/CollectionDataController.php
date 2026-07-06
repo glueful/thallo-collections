@@ -205,7 +205,7 @@ final class CollectionDataController
             return Response::validation(['rows' => 'rows must be a non-empty array.']);
         }
 
-        $maxBulk = (int) config($this->context, 'lemma.collections.max_bulk', 100);
+        $maxBulk = (int) config($this->context, 'thallo.collections.max_bulk', 100);
         if (count($rows) > $maxBulk) {
             return Response::validation(['rows' => "Bulk create is limited to {$maxBulk} rows per request."]);
         }

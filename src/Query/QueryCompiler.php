@@ -153,8 +153,8 @@ final class QueryCompiler
      */
     private function resolvePerPage(mixed $requested): int
     {
-        $default = (int) config($this->context, 'lemma.collections.default_per_page', 20);
-        $max     = (int) config($this->context, 'lemma.collections.max_per_page', 100);
+        $default = (int) config($this->context, 'thallo.collections.default_per_page', 20);
+        $max     = (int) config($this->context, 'thallo.collections.max_per_page', 100);
 
         $perPage = ($requested === null || $requested === '') ? $default : (int) $requested;
 
