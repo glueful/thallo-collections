@@ -10,7 +10,7 @@ use Glueful\Routing\Router;
 
 /*
  * Admin schema-management API. Triple-gated:
- *   1. capability       — this file is only loaded when lemma.collections is enabled (the boot
+ *   1. capability       — this file is only loaded when thallo.collections is enabled (the boot
  *                         gate skips it otherwise, so requests 404 rather than reaching a handler).
  *   2. auth             — group middleware: an authenticated session is required (401 otherwise).
  *   3. content_permission — per-route Aegis permission: collections.manage to view, schema.manage to

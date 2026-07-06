@@ -30,8 +30,8 @@ use Thallo\Contracts\Schema\FieldTypeRegistry;
  *            are allowed in projections.
  *
  *   page     1-based page number (default 1).
- *   perPage  Rows per page (default: config lemma.collections.default_per_page, 20);
- *            capped at config lemma.collections.max_per_page (100).
+ *   perPage  Rows per page (default: config thallo.collections.default_per_page, 20);
+ *            capped at config thallo.collections.max_per_page (100).
  *
  * ## Filterable / sortable decisions
  *

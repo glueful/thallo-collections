@@ -131,7 +131,7 @@ final class CollectionsServiceProvider extends ServiceProvider
         );
 
         // Routes are gated by ENABLED state (spec §5): register the public API only when the
-        // capability is on. Disabling lemma.collections leaves migrations/tables intact but removes
+        // capability is on. Disabling thallo.collections leaves migrations/tables intact but removes
         // the public surface entirely — requests 404 rather than reaching a disabled handler.
         if (app($context, CapabilityRegistry::class)->isEnabled('thallo.collections')) {
             $this->loadRoutesFrom(__DIR__ . '/../routes/collections.php');
