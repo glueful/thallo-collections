@@ -10,7 +10,7 @@ use Glueful\Helpers\Utils;
  * Public row/collection identifiers: an optionally-prefixed nanoid.
  *
  * The random part delegates to the framework's canonical {@see Utils::generateNanoID()} —
- * the same CSPRNG-backed, unbiased generator every Lemma content repository uses for its
+ * the same CSPRNG-backed, unbiased generator every Thallo content repository uses for its
  * uuids (`Utils::generateNanoID(12)`). This adds only the optional `{prefix}_` so a
  * collection row can carry a human-readable, URL-safe public id, e.g. "prod_V1StGXR8Z5jdHi6".
  *

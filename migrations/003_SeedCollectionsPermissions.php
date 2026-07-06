@@ -11,7 +11,7 @@ use Glueful\Helpers\Utils;
  * Declares the collections admin permissions — the permission ROWS the admin console gates on.
  *
  * The `collections.*` slugs exist only because this pack exists, so the pack declares them here.
- * Granting them to a role is host policy: the Lemma app grants them to `administrator` in its own
+ * Granting them to a role is host policy: the Thallo app grants them to `administrator` in its own
  * dependent migration (which runs after Aegis seeds the role ladder); a different host wires its own
  * grants. Keeping the grant out of this migration also avoids a cross-package migration-ordering
  * dependency (this would otherwise run before Aegis seeds the role).

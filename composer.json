@@ -1,6 +1,6 @@
 {
   "name": "glueful/thallo-collections",
-  "description": "Developer-defined data collections with a public CRUD/query API, as a removable Lemma capability pack.",
+  "description": "Developer-defined data collections with a public CRUD/query API, as a removable Thallo capability pack.",
   "type": "glueful-extension",
   "license": "MIT",
   "authors": [
