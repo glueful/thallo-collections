@@ -134,7 +134,7 @@ final class CollectionAccessResolver
             ? array_values(array_filter($user['roles'], 'is_string'))
             : [];
         try {
-            return $manager->can(trim($user['uuid']), $capability, 'lemma', [
+            return $manager->can(trim($user['uuid']), $capability, 'thallo', [
                 'roles' => $roles,
                 'jwt_claims' => (array) $request->attributes->get('jwt.claims'),
             ]);
