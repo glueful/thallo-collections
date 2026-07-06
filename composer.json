@@ -1,0 +1,29 @@
+{
+  "name": "glueful/thallo-collections",
+  "description": "Developer-defined data collections with a public CRUD/query API, as a removable Lemma capability pack.",
+  "type": "glueful-extension",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Michael Tawiah Sowah",
+      "email": "michael@glueful.dev"
+    }
+  ],
+  "version": "0.1.0",
+  "require": {
+    "php": "^8.3",
+    "glueful/thallo-contracts": "*",
+    "glueful/framework": "^1.64.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Thallo\\Collections\\": "src/"
+    }
+  },
+  "extra": {
+    "glueful": {
+      "provider": "Thallo\\Collections\\CollectionsServiceProvider"
+    }
+  },
+  "minimum-stability": "stable"
+}
