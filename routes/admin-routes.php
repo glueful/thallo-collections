@@ -17,7 +17,7 @@ use Glueful\Routing\Router;
  *                         mutate structure. Referenced by alias string, not a class import.
  */
 $router->group(
-    ['prefix' => '/v1/admin', 'middleware' => ['auth']],
+    ['prefix' => '/v1/admin', 'middleware' => ['collections_disabled_when_tenant', 'auth']],
     function (Router $router): void {
         // View.
         $router->get('/collections', [CollectionAdminSchemaController::class, 'index'])

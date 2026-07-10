@@ -24,7 +24,10 @@ use Glueful\Routing\Router;
  * Paths are uuid-keyed; numeric auto-increment ids are never exposed.
  */
 $router->group(
-    ['prefix' => '/v1/collections', 'middleware' => ['optional_api_key']],
+    [
+        'prefix' => '/v1/collections',
+        'middleware' => ['collections_disabled_when_tenant', 'optional_api_key'],
+    ],
     function (Router $router): void {
         // List rows of a collection.
         $router->get('/{name}', [CollectionDataController::class, 'list'])
