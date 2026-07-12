@@ -16,11 +16,13 @@ use Thallo\Collections\Repositories\CollectionDefinitionRepository;
 use Thallo\Collections\Schema\AccessPolicy;
 use Thallo\Collections\Schema\CollectionDefinition;
 use Thallo\Collections\Schema\CollectionField;
+use Thallo\Collections\Schema\CollectionPhysicalName;
 use Thallo\Collections\Schema\ColumnMapper;
 use Thallo\Collections\Schema\DdlPlanner;
 use Thallo\Collections\Schema\SchemaChange;
 use Thallo\Collections\Schema\SchemaMaterializer;
 use Thallo\Collections\Support\PublicId;
+use Thallo\Tenancy\Tenant\SingleStoreTenant;
 
 /**
  * Orchestrates the full lifecycle of a collection: create, evolve (add field / add index /
@@ -54,11 +56,7 @@ use Thallo\Collections\Support\PublicId;
  */
 final class CollectionManager
 {
-    /** Prefix for a collection's physical table: TABLE_PREFIX . name (e.g. 'coll_posts'). */
-    private const TABLE_PREFIX = 'coll_';
-
-    /** Max collection-name length so TABLE_PREFIX . name fits the 63-char identifier limit. */
-    private const MAX_NAME_LENGTH = 58;
+    private const MAX_NAME_LENGTH = 64;
 
     /**
      * System columns added to every collection table by SchemaMaterializer.
@@ -103,6 +101,7 @@ final class CollectionManager
         private readonly Connection $connection,
         private readonly ColumnMapper $columnMapper,
         private readonly EventService $events,
+        private readonly SingleStoreTenant $tenant,
     ) {
     }
 
@@ -121,10 +120,10 @@ final class CollectionManager
     {
         $this->validateCreate($payload);
 
-        $name      = (string) $payload['name'];
-        $label     = isset($payload['label']) ? (string) $payload['label'] : $this->deriveLabel($name);
-        $tableName = self::tableNameFor($name);
-        $uuid      = PublicId::generate('col');
+        $tenantUuid = $this->tenant->resolve();
+        $name = (string) $payload['name'];
+        $label = isset($payload['label']) ? (string) $payload['label'] : $this->deriveLabel($name);
+        $uuid = PublicId::generate('col');
 
         /** @var list<CollectionField> $fields */
         $fields = array_values(array_map(
@@ -140,35 +139,49 @@ final class CollectionManager
             ? array_values(array_filter($payload['field_order'], 'is_string'))
             : [];
 
-        $def = new CollectionDefinition(
-            uuid: $uuid,
-            name: $name,
-            label: $label,
-            tableName: $tableName,
-            storageMode: 'table',
-            fields: $fields,
-            schemaVersion: 1,
-            status: 'active',
-            accessPolicy: $accessPolicy,
-            fieldOrder: $fieldOrder,
-        );
-
-        // One transaction covers the definition row AND the DDL: on PostgreSQL (and SQLite)
-        // DDL is transactional, so a failure anywhere rolls back both — no orphan table,
-        // no dangling definition. The materializer's own transaction nests as a savepoint.
-        $this->connection->transaction(function () use ($def, $actorType, $actorId): void {
-            $this->repo->insert($def);
-            $this->materializer->apply(
-                $def,
-                $this->planner->planCreate($def),
-                $actorType,
-                $actorId,
+        for ($attempt = 1; $attempt <= 5; $attempt++) {
+            $def = new CollectionDefinition(
+                uuid: $uuid,
+                tenantUuid: $tenantUuid,
+                name: $name,
+                label: $label,
+                tableName: CollectionPhysicalName::generate($tenantUuid),
+                storageMode: 'table',
+                fields: $fields,
+                schemaVersion: 1,
+                status: 'active',
+                accessPolicy: $accessPolicy,
+                fieldOrder: $fieldOrder,
             );
-        });
 
-        $this->events->dispatch(new CollectionCreated($name, $actorType, $actorId));
+            try {
+                // A fresh transaction per attempt keeps a table-name collision from poisoning
+                // the next PostgreSQL attempt. Definition + DDL always commit together.
+                $this->connection->transaction(function () use ($def, $actorType, $actorId): void {
+                    $this->repo->insert($def);
+                    $this->materializer->apply(
+                        $def,
+                        $this->planner->planCreate($def),
+                        $actorType,
+                        $actorId,
+                    );
+                });
+            } catch (\PDOException $e) {
+                if (
+                    $e->getCode() === '23505'
+                    && str_contains($e->getMessage(), 'uniq_collection_def_table_name')
+                    && $attempt < 5
+                ) {
+                    continue;
+                }
+                throw $e;
+            }
 
-        return $def;
+            $this->events->dispatch(new CollectionCreated($name, $actorType, $actorId, $tenantUuid));
+            return $def;
+        }
+
+        throw new \RuntimeException('Could not allocate a unique collection physical table name.');
     }
 
     /**
@@ -206,7 +219,14 @@ final class CollectionManager
 
         $this->commitAlter($current, $next, $ops, $actorType, $actorId);
 
-        $this->events->dispatch(new CollectionUpdated($name, 'field_added', $fieldName, $actorType, $actorId));
+        $this->events->dispatch(new CollectionUpdated(
+            $name,
+            'field_added',
+            $fieldName,
+            $actorType,
+            $actorId,
+            $current->tenantUuid,
+        ));
 
         return $next;
     }
@@ -251,7 +271,14 @@ final class CollectionManager
 
         $this->commitAlter($current, $next, $ops, $actorType, $actorId);
 
-        $this->events->dispatch(new CollectionUpdated($name, 'index_added', $field, $actorType, $actorId));
+        $this->events->dispatch(new CollectionUpdated(
+            $name,
+            'index_added',
+            $field,
+            $actorType,
+            $actorId,
+            $current->tenantUuid,
+        ));
 
         return $next;
     }
@@ -294,7 +321,14 @@ final class CollectionManager
 
         $this->commitAlter($current, $next, $ops, $actorType, $actorId);
 
-        $this->events->dispatch(new CollectionUpdated($name, 'index_removed', $field, $actorType, $actorId));
+        $this->events->dispatch(new CollectionUpdated(
+            $name,
+            'index_removed',
+            $field,
+            $actorType,
+            $actorId,
+            $current->tenantUuid,
+        ));
 
         return $next;
     }
@@ -338,7 +372,14 @@ final class CollectionManager
 
         $this->commitAlter($current, $next, $ops, $actorType, $actorId);
 
-        $this->events->dispatch(new CollectionUpdated($name, 'field_dropped', $field, $actorType, $actorId));
+        $this->events->dispatch(new CollectionUpdated(
+            $name,
+            'field_dropped',
+            $field,
+            $actorType,
+            $actorId,
+            $current->tenantUuid,
+        ));
 
         return $next;
     }
@@ -384,7 +425,7 @@ final class CollectionManager
             );
         });
 
-        $this->events->dispatch(new CollectionDropped($name, $actorType, $actorId));
+        $this->events->dispatch(new CollectionDropped($name, $actorType, $actorId, $current->tenantUuid));
     }
 
     /**
@@ -404,6 +445,7 @@ final class CollectionManager
         $current = $this->loadOrFail($name);
         $next    = new CollectionDefinition(
             uuid: $current->uuid,
+            tenantUuid: $current->tenantUuid,
             name: $current->name,
             label: $current->label,
             tableName: $current->tableName,
@@ -420,6 +462,7 @@ final class CollectionManager
             $this->repo->update($next);
             $this->connection->table('collection_schema_changes')->insert([
                 'uuid'            => PublicId::generate('sc'),
+                'tenant_uuid'     => $current->tenantUuid,
                 'collection_uuid' => $current->uuid,
                 'change_type'     => 'update_access',
                 'payload'         => (string) json_encode($policy->toArray(), JSON_THROW_ON_ERROR),
@@ -432,7 +475,14 @@ final class CollectionManager
             ]);
         });
 
-        $this->events->dispatch(new CollectionUpdated($name, 'access_updated', null, $actorType, $actorId));
+        $this->events->dispatch(new CollectionUpdated(
+            $name,
+            'access_updated',
+            null,
+            $actorType,
+            $actorId,
+            $current->tenantUuid,
+        ));
 
         return $next;
     }
@@ -447,6 +497,7 @@ final class CollectionManager
         $current = $this->loadOrFail($name);
         $next    = new CollectionDefinition(
             uuid: $current->uuid,
+            tenantUuid: $current->tenantUuid,
             name: $current->name,
             label: $current->label,
             tableName: $current->tableName,
@@ -501,7 +552,7 @@ final class CollectionManager
         }
 
         // fields: full per-field validation plus duplicate-name detection across the payload.
-        $tableName = self::tableNameFor($name);
+        $tableName = CollectionPhysicalName::generate($this->tenant->resolve());
         $seen      = [];
         foreach ((array) ($payload['fields'] ?? []) as $i => $fieldData) {
             foreach ($this->validateFieldSpec((array) $fieldData, $tableName) as $key => $message) {
@@ -596,11 +647,6 @@ final class CollectionManager
      * Physical table name for a collection: the name with the {@see self::TABLE_PREFIX} prefix.
      * Public + static so tests and tooling resolve the table name without re-deriving the scheme.
      */
-    public static function tableNameFor(string $name): string
-    {
-        return self::TABLE_PREFIX . $name;
-    }
-
     /**
      * Load a CollectionDefinition by name, throwing if it does not exist.
      *
@@ -718,6 +764,7 @@ final class CollectionManager
     {
         return new CollectionDefinition(
             uuid: $current->uuid,
+            tenantUuid: $current->tenantUuid,
             name: $current->name,
             label: $current->label,
             tableName: $current->tableName,

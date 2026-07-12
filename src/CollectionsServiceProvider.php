@@ -16,6 +16,7 @@ use Thallo\Collections\Http\CollectionScopeMiddleware;
 use Thallo\Collections\Http\Controllers\CollectionAdminSchemaController;
 use Thallo\Collections\Http\Controllers\CollectionDataController;
 use Thallo\Collections\Query\QueryCompiler;
+use Thallo\Collections\Purge\CollectionsPurgeHandler;
 use Thallo\Collections\Relations\RelationResolver;
 use Thallo\Collections\Repositories\CollectionDefinitionRepository;
 use Thallo\Collections\Schema\CollectionFieldTypes;
@@ -102,6 +103,12 @@ final class CollectionsServiceProvider extends ServiceProvider
                 'class'    => CollectionAdminSchemaController::class,
                 'shared'   => true,
                 'autowire' => true,
+            ],
+            CollectionsPurgeHandler::class => [
+                'class' => CollectionsPurgeHandler::class,
+                'shared' => true,
+                'autowire' => true,
+                'alias' => ['thallo.collections.purge_handler'],
             ],
         ];
     }

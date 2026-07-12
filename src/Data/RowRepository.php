@@ -71,7 +71,7 @@ final class RowRepository
         // This narrows (not closes — plain MVCC reads don't block) the race with a
         // concurrent delete of a referenced target; closing it fully needs FOR SHARE /
         // FOR UPDATE row locks, which the framework query builder does not expose yet.
-        $stored = $this->connection->transaction(function () use ($def, $input, $row, $uuid): array {
+        $stored = $this->withinTransaction(function () use ($def, $input, $row, $uuid): array {
             $this->assertRelationTargets($def, $input);
             $this->connection->table($def->tableName)->insert($row);
 
@@ -79,7 +79,9 @@ final class RowRepository
         });
 
         // After commit — listeners must never observe a row that can still roll back.
-        $this->events->dispatch(new CollectionRowCreated($def->name, $uuid, $stored, $actor));
+        $this->connection->afterCommit(fn () => $this->events->dispatch(
+            new CollectionRowCreated($def->name, $uuid, $stored, $actor, $def->tenantUuid),
+        ));
 
         return $stored;
     }
@@ -111,7 +113,7 @@ final class RowRepository
         ]);
 
         // Same transaction bracket as create() (see the comment there).
-        $stored = $this->connection->transaction(function () use ($def, $input, $uuid, $changes): array {
+        $stored = $this->withinTransaction(function () use ($def, $input, $uuid, $changes): array {
             $this->assertRelationTargets($def, $input);
             $this->connection->table($def->tableName)
                 ->where('uuid', $uuid)
@@ -120,7 +122,9 @@ final class RowRepository
             return $this->fetchOrFail($def, $uuid);
         });
 
-        $this->events->dispatch(new CollectionRowUpdated($def->name, $uuid, $stored, $actor));
+        $this->connection->afterCommit(fn () => $this->events->dispatch(
+            new CollectionRowUpdated($def->name, $uuid, $stored, $actor, $def->tenantUuid),
+        ));
 
         return $stored;
     }
@@ -141,14 +145,16 @@ final class RowRepository
 
         // Reference check + delete share one transaction (see create() for the residual
         // race caveat — a referencing row committed between the check and the delete).
-        $this->connection->transaction(function () use ($def, $uuid): void {
+        $this->withinTransaction(function () use ($def, $uuid): void {
             $this->resolver->assertNotReferenced($def, $uuid);
             $this->connection->table($def->tableName)
                 ->where('uuid', $uuid)
                 ->delete();
         });
 
-        $this->events->dispatch(new CollectionRowDeleted($def->name, $uuid, $actor));
+        $this->connection->afterCommit(fn () => $this->events->dispatch(
+            new CollectionRowDeleted($def->name, $uuid, $actor, $def->tenantUuid),
+        ));
     }
 
     /**
@@ -170,7 +176,9 @@ final class RowRepository
         // PostgreSQL: RESTART IDENTITY resets the auto-increment id.
         $this->connection->getPDO()->exec("TRUNCATE TABLE \"{$table}\" RESTART IDENTITY");
 
-        $this->events->dispatch(new CollectionTruncated($def->name, $count, $actor));
+        $this->connection->afterCommit(fn () => $this->events->dispatch(
+            new CollectionTruncated($def->name, $count, $actor, $def->tenantUuid),
+        ));
 
         return $count;
     }
@@ -236,5 +244,14 @@ final class RowRepository
         }
 
         return $row;
+    }
+
+    private function withinTransaction(callable $callback): mixed
+    {
+        if ($this->connection->getPDO()->inTransaction()) {
+            return $callback();
+        }
+
+        return $this->connection->transaction($callback);
     }
 }

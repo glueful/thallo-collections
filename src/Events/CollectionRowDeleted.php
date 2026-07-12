@@ -25,6 +25,7 @@ final class CollectionRowDeleted extends BaseEvent
         public readonly string $collectionName,
         public readonly string $rowUuid,
         public readonly Actor $actor,
+        public readonly string $tenantUuid = '',
     ) {
         parent::__construct();
     }

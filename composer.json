@@ -13,6 +13,7 @@
   "require": {
     "php": "^8.3",
     "glueful/thallo-contracts": "*",
+    "glueful/thallo-tenancy": "*",
     "glueful/framework": "^1.64.0"
   },
   "autoload": {

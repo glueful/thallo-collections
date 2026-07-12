@@ -15,6 +15,7 @@ final class CreateCollectionSchemaChangesTable implements MigrationInterface
         $schema->createTable('collection_schema_changes', function ($table) {
             $table->bigInteger('id')->primary()->autoIncrement();
             $table->string('uuid', 24);
+            $table->string('tenant_uuid', 12)->notNull();
             $table->string('collection_uuid', 24);
             $table->string('change_type', 32);
             $table->text('payload');
@@ -25,7 +26,15 @@ final class CreateCollectionSchemaChangesTable implements MigrationInterface
             $table->timestamp('created_at')->nullable();
             $table->timestamp('applied_at')->nullable();
             $table->unique('uuid');
-            $table->index('collection_uuid');
+        });
+        // PostgreSQL's CREATE TABLE generator emits unique constraints inline; ordinary indexes
+        // are materialized through ALTER TABLE so they are not silently discarded.
+        $schema->alterTable('collection_schema_changes', static function ($table): void {
+            $table->index('collection_uuid', 'collection_schema_changes_collection_uuid_index');
+            $table->index(
+                ['tenant_uuid', 'collection_uuid'],
+                'idx_collection_changes_tenant_collection',
+            );
         });
     }
 

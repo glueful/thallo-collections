@@ -23,6 +23,7 @@ final class CollectionCreated extends BaseEvent
         public readonly string $collectionName,
         public readonly string $actorType,
         public readonly ?string $actorId,
+        public readonly string $tenantUuid = '',
     ) {
         parent::__construct();
     }

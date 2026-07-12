@@ -30,6 +30,7 @@ final class CollectionDefinition
             AccessPolicy::SCOPED,
         ),
         public readonly array $fieldOrder = [],
+        public readonly string $tenantUuid = '',
     ) {
     }
 
@@ -84,6 +85,7 @@ final class CollectionDefinition
 
         return new self(
             uuid: (string) ($row['uuid'] ?? ''),
+            tenantUuid: (string) ($row['tenant_uuid'] ?? ''),
             name: (string) ($row['name'] ?? ''),
             label: (string) ($row['label'] ?? ''),
             tableName: (string) ($row['table_name'] ?? ''),

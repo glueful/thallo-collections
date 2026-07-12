@@ -26,7 +26,12 @@ use Glueful\Routing\Router;
 $router->group(
     [
         'prefix' => '/v1/collections',
-        'middleware' => ['collections_disabled_when_tenant', 'optional_api_key'],
+        'middleware' => [
+            'tenant_profile:public,soft',
+            'optional_api_key',
+            'collections_tenant_binding',
+            'tenant_bootstrap',
+        ],
     ],
     function (Router $router): void {
         // List rows of a collection.

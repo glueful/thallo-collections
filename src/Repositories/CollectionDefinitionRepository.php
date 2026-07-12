@@ -6,6 +6,7 @@ namespace Thallo\Collections\Repositories;
 
 use Glueful\Database\Connection;
 use Thallo\Collections\Schema\CollectionDefinition;
+use Thallo\Tenancy\Tenant\SingleStoreTenant;
 
 /**
  * CRUD gateway for the collection_definitions table.
@@ -17,6 +18,7 @@ final class CollectionDefinitionRepository
 {
     public function __construct(
         private readonly Connection $connection,
+        private readonly SingleStoreTenant $tenant,
     ) {
     }
 
@@ -29,6 +31,7 @@ final class CollectionDefinitionRepository
 
         $this->connection->table('collection_definitions')->insert([
             'uuid'           => $def->uuid,
+            'tenant_uuid'    => $def->tenantUuid,
             'name'           => $def->name,
             'label'          => $def->label,
             'table_name'     => $def->tableName,
@@ -53,7 +56,8 @@ final class CollectionDefinitionRepository
     public function update(CollectionDefinition $def, ?int $expectedSchemaVersion = null): int
     {
         $query = $this->connection->table('collection_definitions')
-            ->where('uuid', $def->uuid);
+            ->where('uuid', $def->uuid)
+            ->where('tenant_uuid', $def->tenantUuid);
 
         if ($expectedSchemaVersion !== null) {
             $query->where('schema_version', $expectedSchemaVersion);
@@ -81,8 +85,10 @@ final class CollectionDefinitionRepository
      */
     public function delete(string $uuid): void
     {
+        $tenantUuid = $this->tenant->resolve();
         $this->connection->table('collection_definitions')
             ->where('uuid', $uuid)
+            ->where('tenant_uuid', $tenantUuid)
             ->delete();
     }
 
@@ -93,8 +99,10 @@ final class CollectionDefinitionRepository
      */
     public function findByName(string $name): ?CollectionDefinition
     {
+        $tenantUuid = $this->tenant->resolve();
         $row = $this->connection->table('collection_definitions')
             ->where('name', $name)
+            ->where('tenant_uuid', $tenantUuid)
             ->first();
 
         return $row !== null ? CollectionDefinition::fromRow($row) : null;
@@ -107,8 +115,10 @@ final class CollectionDefinitionRepository
      */
     public function findByUuid(string $uuid): ?CollectionDefinition
     {
+        $tenantUuid = $this->tenant->resolve();
         $row = $this->connection->table('collection_definitions')
             ->where('uuid', $uuid)
+            ->where('tenant_uuid', $tenantUuid)
             ->first();
 
         return $row !== null ? CollectionDefinition::fromRow($row) : null;
@@ -121,7 +131,15 @@ final class CollectionDefinitionRepository
      */
     public function all(): array
     {
-        $rows = $this->connection->table('collection_definitions')->get();
+        return $this->allForTenant($this->tenant->resolve());
+    }
+
+    /** @return list<CollectionDefinition> */
+    public function allForTenant(string $tenantUuid): array
+    {
+        $rows = $this->connection->table('collection_definitions')
+            ->where('tenant_uuid', $tenantUuid)
+            ->get();
 
         return array_values(array_map(
             static fn (array $row): CollectionDefinition => CollectionDefinition::fromRow($row),

@@ -15,9 +15,10 @@ final class CreateCollectionDefinitionsTable implements MigrationInterface
         $schema->createTable('collection_definitions', function ($table) {
             $table->bigInteger('id')->primary()->autoIncrement();
             $table->string('uuid', 24);
+            $table->string('tenant_uuid', 12)->notNull();
             $table->string('name', 64);
             $table->string('label', 160);
-            $table->string('table_name', 80);
+            $table->string('table_name', 63);
             $table->string('storage_mode', 16)->default('table');
             $table->text('fields');
             $table->integer('schema_version')->default(1);
@@ -31,8 +32,11 @@ final class CreateCollectionDefinitionsTable implements MigrationInterface
             $table->timestamp('created_at')->nullable();
             $table->timestamp('updated_at')->nullable();
             $table->unique('uuid');
-            $table->unique('name');
-            $table->unique('table_name');
+            $table->unique(['tenant_uuid', 'name'], 'uniq_collection_def_tenant_name');
+            $table->unique('table_name', 'uniq_collection_def_table_name');
+        });
+        $schema->alterTable('collection_definitions', static function ($table): void {
+            $table->index('tenant_uuid', 'collection_definitions_tenant_uuid_index');
         });
     }
 

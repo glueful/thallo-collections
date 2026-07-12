@@ -30,6 +30,7 @@ final class CollectionUpdated extends BaseEvent
         public readonly ?string $detail,
         public readonly string $actorType,
         public readonly ?string $actorId,
+        public readonly string $tenantUuid = '',
     ) {
         parent::__construct();
     }

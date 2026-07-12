@@ -21,6 +21,7 @@ final class CollectionTruncated extends BaseEvent
         public readonly string $collectionName,
         public readonly int $deletedCount,
         public readonly Actor $actor,
+        public readonly string $tenantUuid = '',
     ) {
         parent::__construct();
     }

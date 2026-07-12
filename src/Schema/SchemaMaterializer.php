@@ -103,6 +103,7 @@ final class SchemaMaterializer
 
         $this->connection->table('collection_schema_changes')->insert([
             'uuid'            => $auditUuid,
+            'tenant_uuid'     => $def->tenantUuid,
             'collection_uuid' => $def->uuid,
             'change_type'     => $op->op,
             'payload'         => (string) json_encode(
@@ -127,6 +128,7 @@ final class SchemaMaterializer
             try {
                 $this->connection->table('collection_schema_changes')
                     ->where('uuid', $auditUuid)
+                    ->where('tenant_uuid', $def->tenantUuid)
                     ->update(['status' => 'failed']);
             } catch (\Throwable) {
                 // Intentionally suppressed (see class docblock for reasoning).
@@ -138,6 +140,7 @@ final class SchemaMaterializer
         // On success: mark as applied.
         $this->connection->table('collection_schema_changes')
             ->where('uuid', $auditUuid)
+            ->where('tenant_uuid', $def->tenantUuid)
             ->update(['status' => 'applied', 'applied_at' => date('Y-m-d H:i:s')]);
     }
 
@@ -227,17 +230,19 @@ final class SchemaMaterializer
                 $isUnique  = $op->indexKind === 'unique';
 
             if ($isUnique) {
+                $indexName = CollectionPhysicalName::indexName($def->tableName, $colName, 'unique');
                 $this->schema->alterTable(
                     $def->tableName,
-                    static function (TableBuilderInterface $t) use ($colName): void {
-                        $t->unique($colName);
+                    static function (TableBuilderInterface $t) use ($colName, $indexName): void {
+                        $t->unique($colName, $indexName);
                     },
                 );
             } else {
+                $indexName = CollectionPhysicalName::indexName($def->tableName, $colName, 'plain');
                 $this->schema->alterTable(
                     $def->tableName,
-                    static function (TableBuilderInterface $t) use ($colName): void {
-                        $t->index($colName);
+                    static function (TableBuilderInterface $t) use ($colName, $indexName): void {
+                        $t->index($colName, $indexName);
                     },
                 );
             }
@@ -253,7 +258,7 @@ final class SchemaMaterializer
                 $table    = $def->tableName;
 
             if ($isUnique) {
-                $idxName = "{$table}_{$colName}_unique";
+                $idxName = CollectionPhysicalName::indexName($table, $colName, 'unique');
                 $this->schema->alterTable(
                     $table,
                     static function (TableBuilderInterface $t) use ($idxName): void {
@@ -261,7 +266,7 @@ final class SchemaMaterializer
                     },
                 );
             } else {
-                $idxName = "{$table}_{$colName}_index";
+                $idxName = CollectionPhysicalName::indexName($table, $colName, 'plain');
                 $this->schema->alterTable(
                     $table,
                     static function (TableBuilderInterface $t) use ($idxName): void {

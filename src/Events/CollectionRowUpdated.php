@@ -26,6 +26,7 @@ final class CollectionRowUpdated extends BaseEvent
         public readonly string $rowUuid,
         public readonly array $row,
         public readonly Actor $actor,
+        public readonly string $tenantUuid = '',
     ) {
         parent::__construct();
     }
