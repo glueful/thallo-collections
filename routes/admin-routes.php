@@ -15,9 +15,15 @@ use Glueful\Routing\Router;
  *   2. auth             — group middleware: an authenticated session is required (401 otherwise).
  *   3. content_permission — per-route Aegis permission: collections.manage to view, schema.manage to
  *                         mutate structure. Referenced by alias string, not a class import.
+ *   4. admin_tenant_binding — binds the operator's selected workspace so collection_definitions and
+ *                         the per-tenant tc_* data tables scope to it (mirrors routes/admin.php);
+ *                         inert until full resolution, tenant_bootstrap handles bootstrap.
  */
 $router->group(
-    ['prefix' => '/v1/admin', 'middleware' => ['auth', 'tenant_profile:admin', 'tenant_bootstrap']],
+    [
+        'prefix' => '/v1/admin',
+        'middleware' => ['auth', 'tenant_profile:admin', 'tenant_bootstrap', 'admin_tenant_binding'],
+    ],
     function (Router $router): void {
         // View.
         $router->get('/collections', [CollectionAdminSchemaController::class, 'index'])
