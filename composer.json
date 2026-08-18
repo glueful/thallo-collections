@@ -34,9 +34,6 @@
                     "path": "migrations",
                     "priority": "dependent",
                     "mode": "core",
-                    "legacyAliases": [
-                        "thallo-collections"
-                    ],
                     "verifier": "Thallo\\Collections\\Schema\\CollectionsSchemaVerifier"
                 }
             ]
