@@ -6,7 +6,6 @@ namespace Thallo\Collections;
 
 use Glueful\Extensions\DeclaresLoadOrder;
 use Glueful\Bootstrap\ApplicationContext;
-use Glueful\Database\Migrations\MigrationPriority;
 use Glueful\Extensions\ServiceProvider;
 use Thallo\Collections\CollectionManager;
 use Thallo\Collections\Data\RowRepository;
@@ -148,11 +147,7 @@ final class CollectionsServiceProvider extends ServiceProvider implements Declar
 
         // Migrations register on INSTALL, not enable (outside the gate below), so disabling
         // the capability still preserves the tables.
-        $this->loadMigrationsFrom(
-            __DIR__ . '/../migrations',
-            MigrationPriority::DEPENDENT,
-            'thallo-collections',
-        );
+        // Migrations are declared by the composer manifest (extra.glueful.migrations).
 
         // Routes are gated by ENABLED state (spec §5): register the public API only when the
         // capability is on. Disabling thallo.collections leaves migrations/tables intact but removes
