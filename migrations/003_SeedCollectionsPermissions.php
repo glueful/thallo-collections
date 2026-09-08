@@ -39,7 +39,7 @@ final class SeedCollectionsPermissions implements MigrationInterface
             return;
         }
 
-        $this->db = new Connection();
+        $this->db = $schema->getConnection();
 
         $existing = [];
         foreach (
