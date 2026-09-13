@@ -74,3 +74,10 @@ CMS core boots unchanged. The `thallo.collections` capability disappears from
 `GET /v1/admin/capabilities`, so the collections admin section hides automatically, and the public
 `/v1/collections/*` surface is gone. Existing `coll_*` tables remain on disk (drop them manually if
 you want the data gone).
+
+## Contributing
+
+This repository is a read-only mirror, published from
+[glueful/thallo](https://github.com/glueful/thallo) on every release; its `main` is overwritten
+by the next split, so nothing can land here. Issues and pull requests belong in glueful/thallo,
+where this code lives at `packages/thallo-collections/`.
