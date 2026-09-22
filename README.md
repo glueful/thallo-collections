@@ -3,8 +3,8 @@
 Developer-defined **data collections** for [Thallo](https://thallo.dev) — schemas backed by
 **real per-collection tables**, with an auto-generated CRUD/query API, an admin
 schema builder, per-operation access policies, soft relations, and emitted change events — packaged
-as a **removable capability pack**. It depends only on the framework and `glueful/thallo-contracts`;
-install it, disable it, or `composer remove` it without touching the core.
+as a **capability pack**. It depends only on the framework and `glueful/thallo-contracts`, and an
+operator can switch it off without touching the core.
 
 Each collection is a first-class table (`coll_<name>`), not a JSON blob, so rows are queryable,
 indexable, and relationable like any other table — while the schema is defined and evolved entirely
@@ -42,8 +42,9 @@ The provider registers a single capability in `boot()`:
 new Capability('thallo.collections', label: 'Data collections', description: '…');
 ```
 
-- **Enabled by default.** Disable it by setting `'thallo.collections' => false` in `config/thallo.php`'s
-  `capabilities` switchboard.
+- **Enabled by default.** An operator turns it off or on in the admin under **Extensions ›
+  Capabilities**. The switch is stored system-wide and overrides the deploy-time
+  `thallo.capabilities` config map.
 - **Gated, not just UI.** When disabled, the public + admin routes are never registered (requests
   `404`, not a live-but-disabled handler). Migrations run on **install**, not enable, so disabling
   the capability preserves the `collection_definitions` metadata and every `coll_*` data table.
@@ -55,25 +56,17 @@ new Capability('thallo.collections', label: 'Data collections', description: '�
 
 Depends on `glueful/thallo-contracts` and `glueful/framework` — and **never** on `glueful/thallo` (the
 application). The repo's `composer boundaries` check enforces this at both the Composer-dependency
-and source level (no `App\` references in `src/`).
+and source level (no `Thallo\Core\` references in `src/` or `routes/`).
 
 ## Install
 
-The pack is **bundled by default** in the Thallo create-project template. To add it to an existing app
-(it lives as a path package in this monorepo):
+The pack ships with Thallo: `glueful/thallo-core` requires it at the same version and the project's
+`config/serviceproviders.php` loads its provider, so there is nothing to install or enable per pack.
+Its metadata tables are created by `php glueful migrate:run` with the rest of the schema.
 
-1. `composer require glueful/thallo-collections`
-2. `./thallo extensions:enable thallo-collections` (writes the provider into the
-   `config/extensions.php` allow-list and recompiles the extension cache)
-3. `./thallo migrate:run` to create the metadata tables.
-
-## Remove
-
-`./thallo extensions:disable thallo-collections`, then `composer remove glueful/thallo-collections`. The
-CMS core boots unchanged. The `thallo.collections` capability disappears from
-`GET /v1/admin/capabilities`, so the collections admin section hides automatically, and the public
-`/v1/collections/*` surface is gone. Existing `coll_*` tables remain on disk (drop them manually if
-you want the data gone).
+Switching the capability off (Extensions › Capabilities) drops it from
+`GET /v1/admin/capabilities`, so the collections admin section hides and the public
+`/v1/collections/*` surface is gone. Existing `coll_*` tables remain on disk.
 
 ## Contributing
 
