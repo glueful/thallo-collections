@@ -18,7 +18,7 @@ use Thallo\Contracts\Schema\FieldTypeRegistry;
  *
  *   filter   [field => [op => value]]
  *            ops: eq, ne, lt, lte, gt, gte, like, in, null
- *            'like'  → LIKE %value%  (bound as a parameter)
+ *            'like'  → contains the value, ignoring case, with `%`/`_` matched literally
  *            'in'    → WHERE field IN (...)
  *            'null'  → truthy value → WHERE field IS NULL
  *                    → falsy value  → WHERE field IS NOT NULL
@@ -264,7 +264,9 @@ final class QueryCompiler
             if (!is_scalar($value)) {
                 throw InvalidQueryException::malformedParam("filter[{$field}][like]", 'a scalar value');
             }
-            $qb->whereLike($field, '%' . (string) $value . '%');
+            // Whatever the case, and a `%` or `_` in the value is that character, not a wildcard:
+            // one text-search rule across Thallo, and the same answer on every database.
+            $qb->whereContains($field, (string) $value);
         } elseif ($op === 'in') {
             $values = array_values(array_filter((array) $value, 'is_scalar'));
             if ($values === []) {
