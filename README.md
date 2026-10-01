@@ -39,7 +39,7 @@ through the admin API.
 The provider registers a single capability in `boot()`:
 
 ```php
-new Capability('thallo.collections', label: 'Data collections', description: '…');
+new Capability('thallo.collections', label: 'Collections', description: '…');
 ```
 
 - **Enabled by default.** An operator turns it off or on in the admin under **Extensions ›

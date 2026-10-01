@@ -139,8 +139,9 @@ final class CollectionsServiceProvider extends ServiceProvider implements Declar
     {
         app($context, CapabilityRegistry::class)->register(new Capability(
             'thallo.collections',
-            label: 'Data collections',
-            description: 'Developer-defined data collections with a public CRUD/query API.',
+            label: 'Collections',
+            description: 'Your own backend: define tables in the admin and each gets an instant REST API, '
+                . 'with filters, relations and per-operation access rules.',
         ));
 
         CollectionFieldTypes::register(app($context, FieldTypeRegistry::class));
