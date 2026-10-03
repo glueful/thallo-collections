@@ -24,10 +24,11 @@ use Thallo\Collections\Schema\ColumnMapper;
 use Thallo\Collections\Schema\DdlPlanner;
 use Thallo\Collections\Schema\SchemaMaterializer;
 use Thallo\Contracts\Capability\Capability;
+use Thallo\Contracts\Capability\DeclaresCapabilities;
 use Thallo\Contracts\Capability\CapabilityRegistry;
 use Thallo\Contracts\Schema\FieldTypeRegistry;
 
-final class CollectionsServiceProvider extends ServiceProvider implements DeclaresLoadOrder
+final class CollectionsServiceProvider extends ServiceProvider implements DeclaresLoadOrder, DeclaresCapabilities
 {
     public static function loadAfter(): array
     {
@@ -135,14 +136,20 @@ final class CollectionsServiceProvider extends ServiceProvider implements Declar
         // cf. aegis/users/import-export); DI bindings are declared via services().
     }
 
+    public function capabilities(): array
+    {
+        return [
+            new Capability(
+                'thallo.collections',
+                label: 'Collections',
+                description: 'Your own backend: define tables in the admin and each gets an instant REST API, '
+                    . 'with filters, relations and per-operation access rules.',
+            ),
+        ];
+    }
+
     public function boot(ApplicationContext $context): void
     {
-        app($context, CapabilityRegistry::class)->register(new Capability(
-            'thallo.collections',
-            label: 'Collections',
-            description: 'Your own backend: define tables in the admin and each gets an instant REST API, '
-                . 'with filters, relations and per-operation access rules.',
-        ));
 
         CollectionFieldTypes::register(app($context, FieldTypeRegistry::class));
 
