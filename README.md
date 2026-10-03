@@ -42,7 +42,7 @@ The provider registers a single capability in `boot()`:
 new Capability('thallo.collections', label: 'Collections', description: '…');
 ```
 
-- **Enabled by default.** An operator turns it off or on in the admin under **Features**. The switch is stored system-wide and overrides the deploy-time
+- **Enabled by default.** An operator turns it off or on in the admin under **Extensions › Capabilities**. The switch is stored system-wide and overrides the deploy-time
   `thallo.capabilities` config map.
 - **Gated, not just UI.** When disabled, the public + admin routes are never registered (requests
   `404`, not a live-but-disabled handler). Migrations run on **install**, not enable, so disabling
@@ -63,7 +63,7 @@ The pack ships with Thallo: `glueful/thallo-core` requires it at the same versio
 `config/serviceproviders.php` loads its provider, so there is nothing to install or enable per pack.
 Its metadata tables are created by `php glueful migrate:run` with the rest of the schema.
 
-Switching the capability off (Features) drops it from
+Switching the capability off (Extensions › Capabilities) drops it from
 `GET /v1/admin/capabilities`, so the collections admin section hides and the public
 `/v1/collections/*` surface is gone. Existing `coll_*` tables remain on disk.
 
